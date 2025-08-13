@@ -11,6 +11,57 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Any, List, Optional, Tuple
 
+# Import the enhanced price formatting function
+def format_price_for_display(symbol, price, data_source=None):
+    """
+    Enhanced price formatting for visualization displays
+    """
+    try:
+        price = float(price)
+        symbol_upper = symbol.upper().replace('/', '')
+        
+        # Gold/XAU formatting
+        if any(gold in symbol_upper for gold in ['XAU', 'GOLD']):
+            return f"${price:,.2f}"
+        
+        # USDT crypto pairs (check before individual crypto check)
+        elif symbol_upper in ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT']:
+            if price >= 100:
+                return f"${price:,.2f}"
+            elif price >= 1:
+                return f"${price:.4f}"
+            else:
+                return f"${price:.6f}"
+        
+        # Cryptocurrency formatting
+        elif any(crypto in symbol_upper for crypto in ['BTC', 'BITCOIN']):
+            if price >= 1000:
+                return f"${price:,.1f}"
+            else:
+                return f"${price:.2f}"
+        
+        elif any(crypto in symbol_upper for crypto in ['ETH', 'ETHEREUM']):
+            return f"${price:,.2f}"
+        
+        # Forex pairs
+        elif any(fx in symbol_upper for fx in ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD']):
+            return f"{price:.5f}"
+        
+        elif any(jpy in symbol_upper for jpy in ['JPY', 'USDJPY', 'EURJPY', 'GBPJPY']):
+            return f"{price:.3f}"
+        
+        # Default formatting based on price range
+        else:
+            if price >= 1000:
+                return f"${price:,.2f}"
+            elif price >= 1:
+                return f"${price:.4f}"
+            else:
+                return f"${price:.6f}"
+                
+    except (ValueError, TypeError):
+        return str(price)
+
 
 def create_confidence_visualization(confidence: float, title: str = "Master AI Confidence") -> go.Figure:
     """
@@ -470,13 +521,15 @@ def display_master_ai_insights_panel(signal_data: Dict[str, Any],
 
 
 def create_entry_optimization_display(entry_data: Dict[str, Any],
-                                    current_price: float) -> None:
+                                    current_price: float,
+                                    symbol: str = "UNKNOWN") -> None:
     """
     Display entry price optimization analysis.
     
     Args:
         entry_data: Entry price optimization data
         current_price: Current market price
+        symbol: Trading symbol for proper price formatting
     """
     st.markdown("#### 🎯 **AI Entry Price Optimization**")
     
@@ -493,7 +546,7 @@ def create_entry_optimization_display(entry_data: Dict[str, Any],
     with col1:
         st.metric(
             "Optimized Entry",
-            f"${entry_price:.4f}",
+            format_price_for_display(symbol, entry_price),
             delta=f"{price_diff:+.2f}% {price_direction}"
         )
     

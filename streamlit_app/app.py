@@ -836,7 +836,7 @@ def display_master_ai_signal_results(smart_entry_result, position_info, symbol):
         # Entry Price Optimization Display
         current_price = technical_analysis.get('current_price', 0)
         if current_price > 0:
-            create_entry_optimization_display(smart_entry_result, current_price)
+            create_entry_optimization_display(smart_entry_result, current_price, symbol)
         
         # Enhanced Strategy Reasoning
         st.markdown("### 🧠 **Master AI Strategy Analysis**")
@@ -1971,24 +1971,183 @@ def sanitize_filename(name):
     """Membersihkan string untuk digunakan sebagai nama file yang aman."""
     return re.sub(r'[^a-zA-Z0-9_-]', '', name.replace('/', '_').replace('\\', '_'))
 
-def format_price(symbol, price):
+def format_price(symbol, price, data_source=None):
     """
-    Format price berdasarkan symbol
+    Enhanced format price berdasarkan symbol dan data source
     """
     try:
         price = float(price)
-        if 'XAU' in symbol.upper() or 'GOLD' in symbol.upper():
+        symbol_upper = symbol.upper().replace('/', '')
+        
+        # Gold/XAU formatting
+        if any(gold in symbol_upper for gold in ['XAU', 'GOLD']):
             return f"${price:,.2f}"
-        elif 'BTC' in symbol.upper():
-            return f"${price:,.1f}"
-        elif 'ETH' in symbol.upper():
+        
+        # USDT crypto pairs (check before individual crypto check)
+        elif symbol_upper in ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT']:
+            if price >= 100:
+                return f"${price:,.2f}"
+            elif price >= 1:
+                return f"${price:.4f}"
+            else:
+                return f"${price:.6f}"
+        
+        # Cryptocurrency formatting
+        elif any(crypto in symbol_upper for crypto in ['BTC', 'BITCOIN']):
+            if price >= 1000:
+                return f"${price:,.1f}"
+            else:
+                return f"${price:.2f}"
+        
+        elif any(crypto in symbol_upper for crypto in ['ETH', 'ETHEREUM']):
             return f"${price:,.2f}"
-        elif 'JPY' in symbol.upper():
-            return f"{price:.3f}"
-        else:
+        
+        # Forex pairs
+        elif any(fx in symbol_upper for fx in ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD']):
             return f"{price:.5f}"
+        
+        elif any(jpy in symbol_upper for jpy in ['JPY', 'USDJPY', 'EURJPY', 'GBPJPY']):
+            return f"{price:.3f}"
+        
+        # Default formatting based on price range
+        else:
+            if price >= 1000:
+                return f"${price:,.2f}"
+            elif price >= 1:
+                return f"${price:.4f}"
+            else:
+                return f"${price:.6f}"
+                
     except (ValueError, TypeError):
         return str(price)
+
+def format_price_by_source(symbol, price, data_source):
+    """
+    Format price berdasarkan data source untuk konsistensi
+    """
+    if data_source == 'Binance':
+        # Binance formatting untuk crypto
+        return format_crypto_price(symbol, price)
+    elif data_source == 'Twelve Data':
+        # Twelve Data formatting untuk forex/stocks
+        return format_forex_price(symbol, price)
+    else:
+        return format_price(symbol, price)
+
+def format_crypto_price(symbol, price):
+    """
+    Format price khusus untuk cryptocurrency
+    """
+    try:
+        price = float(price)
+        symbol_upper = symbol.upper().replace('/', '')
+        
+        # Major cryptocurrencies
+        if any(major in symbol_upper for major in ['BTC', 'BITCOIN']):
+            if price >= 10000:
+                return f"${price:,.0f}"
+            elif price >= 1000:
+                return f"${price:,.1f}"
+            else:
+                return f"${price:.2f}"
+        
+        elif any(major in symbol_upper for major in ['ETH', 'ETHEREUM']):
+            if price >= 1000:
+                return f"${price:,.1f}"
+            else:
+                return f"${price:.2f}"
+        
+        # USDT pairs
+        elif symbol_upper.endswith('USDT'):
+            if price >= 100:
+                return f"${price:,.2f}"
+            elif price >= 1:
+                return f"${price:.4f}"
+            elif price >= 0.01:
+                return f"${price:.6f}"
+            else:
+                return f"${price:.8f}"
+        
+        # Default crypto formatting
+        else:
+            if price >= 100:
+                return f"${price:,.2f}"
+            elif price >= 1:
+                return f"${price:.4f}"
+            else:
+                return f"${price:.6f}"
+                
+    except (ValueError, TypeError):
+        return str(price)
+
+def format_forex_price(symbol, price):
+    """
+    Format price khusus untuk forex pairs
+    """
+    try:
+        price = float(price)
+        symbol_upper = symbol.upper().replace('/', '')
+        
+        # Japanese Yen pairs (2 decimal places typically)
+        if 'JPY' in symbol_upper:
+            return f"{price:.3f}"
+        
+        # Major forex pairs (5 decimal places typically)
+        elif any(major in symbol_upper for major in ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD', 'USDCAD', 'USDCHF']):
+            return f"{price:.5f}"
+        
+        # Gold and other commodities
+        elif any(commodity in symbol_upper for commodity in ['XAU', 'GOLD', 'SILVER', 'OIL']):
+            return f"${price:,.2f}"
+        
+        # Default forex formatting
+        else:
+            return f"{price:.5f}"
+            
+    except (ValueError, TypeError):
+        return str(price)
+
+def validate_price_ranges(symbol, price):
+    """
+    Validate price ranges untuk different symbols
+    """
+    try:
+        price = float(price)
+        symbol_upper = symbol.upper().replace('/', '')
+        warnings = []
+        
+        # Gold price validation
+        if any(gold in symbol_upper for gold in ['XAU', 'GOLD']):
+            if price < 1000 or price > 5000:
+                warnings.append(f"⚠️ Gold price {price} may be unrealistic (expected: $1000-$5000)")
+        
+        # Bitcoin validation
+        elif any(btc in symbol_upper for btc in ['BTC', 'BITCOIN']):
+            if price < 10000 or price > 150000:
+                warnings.append(f"⚠️ Bitcoin price {price} may be unrealistic (expected: $10,000-$150,000)")
+        
+        # Ethereum validation
+        elif any(eth in symbol_upper for eth in ['ETH', 'ETHEREUM']):
+            if price < 500 or price > 10000:
+                warnings.append(f"⚠️ Ethereum price {price} may be unrealistic (expected: $500-$10,000)")
+        
+        # Forex major pairs validation
+        elif symbol_upper in ['EURUSD']:
+            if price < 0.8 or price > 1.5:
+                warnings.append(f"⚠️ EUR/USD rate {price} may be unrealistic (expected: 0.8-1.5)")
+        
+        elif symbol_upper in ['GBPUSD']:
+            if price < 1.0 or price > 2.0:
+                warnings.append(f"⚠️ GBP/USD rate {price} may be unrealistic (expected: 1.0-2.0)")
+        
+        elif symbol_upper in ['USDJPY']:
+            if price < 100 or price > 200:
+                warnings.append(f"⚠️ USD/JPY rate {price} may be unrealistic (expected: 100-200)")
+        
+        return warnings
+        
+    except (ValueError, TypeError):
+        return [f"⚠️ Invalid price format: {price}"]
 
 def train_and_save_all_models(df, symbol, timeframe_key):
     """Train and save all models with proper error handling and batch prediction."""
