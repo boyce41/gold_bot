@@ -84,3 +84,67 @@ def get_gold_data(api_key, interval, symbol, outputsize=500):
     final_data = all_data.tail(outputsize)
 
     return final_data
+
+# Price formatting utilities for data processing
+def format_data_price(symbol, price, data_source="Twelve Data"):
+    """
+    Format price for data display with source-specific rules
+    """
+    try:
+        price = float(price)
+        symbol_upper = symbol.upper().replace('/', '')
+        
+        if data_source == "Binance":
+            # Binance crypto-specific formatting
+            if symbol_upper.endswith('USDT'):
+                if price >= 100:
+                    return f"${price:,.2f}"
+                elif price >= 1:
+                    return f"${price:.4f}"
+                else:
+                    return f"${price:.6f}"
+            else:
+                return f"${price:,.4f}"
+        
+        elif data_source == "Twelve Data":
+            # Twelve Data multi-asset formatting
+            if any(gold in symbol_upper for gold in ['XAU', 'GOLD']):
+                return f"${price:,.2f}"
+            elif any(fx in symbol_upper for fx in ['EUR', 'GBP', 'AUD', 'NZD', 'CAD', 'CHF']):
+                if 'JPY' in symbol_upper:
+                    return f"{price:.3f}"
+                else:
+                    return f"{price:.5f}"
+            else:
+                return f"${price:,.4f}"
+        
+        # Default formatting
+        return f"${price:,.4f}"
+        
+    except (ValueError, TypeError):
+        return str(price)
+
+def get_price_precision(symbol):
+    """
+    Get appropriate precision for a symbol
+    """
+    symbol_upper = symbol.upper().replace('/', '')
+    
+    # High precision assets
+    if any(fx in symbol_upper for fx in ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD']):
+        return 5
+    
+    # Medium precision
+    elif any(jpy in symbol_upper for jpy in ['JPY']):
+        return 3
+    
+    # Crypto precision based on price range
+    elif symbol_upper.endswith('USDT'):
+        return 4  # Most crypto pairs
+    
+    # Gold and commodities
+    elif any(commodity in symbol_upper for commodity in ['XAU', 'GOLD']):
+        return 2
+    
+    # Default
+    return 4
