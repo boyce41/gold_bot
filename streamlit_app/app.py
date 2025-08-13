@@ -1983,6 +1983,15 @@ def format_price(symbol, price, data_source=None):
         if any(gold in symbol_upper for gold in ['XAU', 'GOLD']):
             return f"${price:,.2f}"
         
+        # USDT crypto pairs (check before individual crypto check)
+        elif symbol_upper in ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT']:
+            if price >= 100:
+                return f"${price:,.2f}"
+            elif price >= 1:
+                return f"${price:.4f}"
+            else:
+                return f"${price:.6f}"
+        
         # Cryptocurrency formatting
         elif any(crypto in symbol_upper for crypto in ['BTC', 'BITCOIN']):
             if price >= 1000:
@@ -1992,14 +2001,6 @@ def format_price(symbol, price, data_source=None):
         
         elif any(crypto in symbol_upper for crypto in ['ETH', 'ETHEREUM']):
             return f"${price:,.2f}"
-        
-        elif symbol_upper in ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT']:
-            if price >= 100:
-                return f"${price:,.2f}"
-            elif price >= 1:
-                return f"${price:.4f}"
-            else:
-                return f"${price:.6f}"
         
         # Forex pairs
         elif any(fx in symbol_upper for fx in ['EURUSD', 'GBPUSD', 'AUDUSD', 'NZDUSD']):
